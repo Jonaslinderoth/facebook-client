@@ -10,11 +10,11 @@ ___INFO___
 
 {
   "type": "CLIENT",
-  "id": "cvt_temp_public_id",
   "__wm": "VGVtcGxhdGUtQXV0aG9yX0ZhY2Vib29rLUNsaWVudC1TaW1vLUFoYXZh",
+  "categories": ["ADVERTISING", "ANALYTICS"],
+  "id": "cvt_temp_public_id",
   "version": 1,
   "securityGroups": [],
-  "categories": ["ADVERTISING", "ANALYTICS"],
   "displayName": "Facebook Client",
   "brand": {
     "id": "brand_dummy",
@@ -71,51 +71,55 @@ if (getRequestPath() === '/fbq/') {
   
   const user_data = JSON.parse(params.ud);
   const custom_data = JSON.parse(params.cd);
+  const dpo = JSON.parse(params.dpo);
 
   const event_data = {
-    pixel_id: params.pid,
-    test_event_code: params.tec,
-    data: {
-      event_name: params.en,
-      event_time: makeInteger(params.et),
-      event_source_url: params.esu,
-      opt_out: params.ou,
-      event_id: params.ei,
-      user_data: {
-        em: user_data.em,
-        ph: user_data.ph,
-        ge: user_data.ge,
-        db: user_data.db,
-        ln: user_data.ln,
-        fn: user_data.fn,
-        ct: user_data.ct,
-        st: user_data.st,
-        zp: user_data.zp,
-        country: user_data.country,
-        client_ip_address: uip,
-        client_user_agent: ua,
-        fbc: _fbc,
-        fbp: _fbp,
-        subscription_id: user_data.subscription_id,
-        lead_id: user_data.lead_id ? makeInteger(user_data.lead_id) : undefined,
-        fb_login_id: user_data.fb_login_id ? makeInteger(user_data.fb_login_id) : undefined,
-        external_id: user_data.external_id
+    event_name: params.en,
+    timestamp_micros: makeInteger(params.et),
+    source_url: params.esu,
+    event_id: params.ei,
+    user_properties: {
+      email_address: user_data.em,
+      phone_number: user_data.ph,
+      gender: user_data.ge,
+      date_of_birth: user_data.db,
+      last_name: user_data.ln,
+      first_name: user_data.fn,
+      address: {
+        city: user_data.ct,
+        region: user_data.st,
+        post_code: user_data.zp,
+        country_code: user_data.country,
       },
-      custom_data: custom_data
-    }
-  };  
+      ip_address: uip,
+      user_agent: ua,
+      user_id: user_data.external_id
+    },
+    'x-fb-pixel_id': params.pid,
+    'x-fb-test_event_code': params.tec,
+    'x-fb-opt_out': params.ou,
+    'x-fb-fbc': _fbc,
+    'x-fb-fbp': _fbp,
+    'x-fb-subscription_id': user_data.subscription_id,
+    'x-fb-lead_id': user_data.lead_id ? makeInteger(user_data.lead_id) : undefined,
+    'x-fb-login_id': user_data.fb_login_id ? makeInteger(user_data.fb_login_id) : undefined,
+    'x-fb-custom_data': custom_data,
+    'x-fb-dpo': dpo
+  };
   
-  runContainer({
-    event_name: 'facebook',
-    event_data: event_data
-  }, () => {
-    setCookie('_fbc', _fbc, {
-      domain: 'auto',
-      path: '/',
-      'max-age': 60*60*24*30*3,
-      samesite: 'Lax',
-      secure: true
-    });
+  if (params.dpoco) event_data['x-fb-dpoco'] = params.dpoco;
+  if (params.dpost) event_data['x-fb-dpost'] = params.dpost;
+  
+  runContainer(event_data, () => {
+    if (_fbc) {
+      setCookie('_fbc', _fbc, {
+        domain: 'auto',
+        path: '/',
+        'max-age': 60*60*24*30*3,
+        samesite: 'Lax',
+        secure: true
+      });
+    }
     setPixelResponse();
     returnResponse();
   });
@@ -433,7 +437,7 @@ scenarios:
     mock('getCookieValues', name => {
       return name === '_fbc' ? [] : [name];
     });
-    mockContainerObj.event_data.data.user_data.fbc = 'fbclid';
+    mockContainerObj['x-fb-fbc'] = 'fbclid';
 
     // Call runCode to run the template's code.
     runCode(mockData);
@@ -449,28 +453,53 @@ scenarios:
     assertApi('setCookie').wasCalled();
     assertApi('setPixelResponse').wasCalled();
     assertApi('returnResponse').wasCalled();
-setup: "const mockData = {};\n\nmock('getCookieValues', name => {\n  return [name];\n\
-  });\n\nmock('getRemoteAddress', () => {\n  return '1.2.3.4';\n});\n\nmock('getRequestHeader',\
-  \ header => {\n  return header;\n});\n\nmock('getRequestPath', () => {\n  return\
-  \ '/fbq/';\n});\n\nconst mockParams = {\n  fbclid: 'fbclid',\n  pid: 'pixel_id',\n\
-  \  tec: 'test_event_code',\n  en: 'en',\n  et: 123123123,\n  esu: 'esu',\n  ou:\
-  \ 'ou',\n  ei: 'ei',\n  ud: '{\"fb_login_id\": \"123123123\", \"subscription_id\"\
-  : \"subscription_id\"}',\n  cd: '{\"content_type\": \"product\", \"currency\": \"\
-  EUR\"}'\n};\n\nconst mockContainerObj = {\n  event_name: 'facebook',\n  event_data:\
-  \ {\n    pixel_id: mockParams.pid,\n    test_event_code: mockParams.tec,\n    data:\
-  \ {\n      event_name: mockParams.en,\n      event_time: mockParams.et,\n      event_source_url:\
-  \ mockParams.esu,\n      opt_out: mockParams.ou,\n      event_id: mockParams.ei,\n\
-  \      user_data: {\n        em: undefined,\n        ph: undefined,\n        ge:\
-  \ undefined,\n        db: undefined,\n        ln: undefined,\n        fn: undefined,\n\
-  \        ct: undefined,\n        country: undefined,\n        zp: undefined,\n \
-  \       st: undefined,\n        fb_login_id: 123123123,\n        subscription_id:\
-  \ 'subscription_id',\n        client_ip_address: '1.2.3.4',\n        client_user_agent:\
-  \ 'user-agent',\n        fbc: '_fbc',\n        fbp: '_fbp',\n        lead_id: undefined,\n\
-  \        external_id: undefined\n      },\n      custom_data: {\n        content_type:\
-  \ 'product',\n        currency: 'EUR'\n      }\n    }\n  }\n};\n   \nmock('getRequestQueryParameters',\
-  \ () => {\n  return mockParams;\n});\n    \nlet complete, containerObj;\nmock('runContainer',\
-  \ (obj, oncomplete) => {\n  complete = oncomplete;\n  containerObj = obj;\n  oncomplete();\n\
-  });\n\nmock('setCookie', (name, value, options) => {});"
+- name: Container run with LDU
+  code: |-
+    mockParams.dpo = '["LDU"]';
+    mockParams.dpoco = '0';
+    mockParams.dpost = '0';
+
+    mockContainerObj['x-fb-dpo'] = ['LDU'];
+    mockContainerObj['x-fb-dpost'] = '0';
+    mockContainerObj['x-fb-dpoco'] = '0';
+
+    // Call runCode to run the template's code.
+    runCode(mockData);
+    assertThat(containerObj, 'runContainer() called with invalid object').isEqualTo(mockContainerObj);
+
+    assertApi('getCookieValues').wasCalledWith('_fbc');
+    assertApi('getCookieValues').wasCalledWith('_fbp');
+    assertApi('getRemoteAddress').wasCalled();
+    assertApi('getRequestHeader').wasCalledWith('user-agent');
+    assertApi('getRequestPath').wasCalled();
+    assertApi('getRequestQueryParameters').wasCalled();
+    assertApi('runContainer').wasCalledWith(containerObj, complete);
+    assertApi('setCookie').wasCalled();
+    assertApi('setPixelResponse').wasCalled();
+    assertApi('returnResponse').wasCalled();
+setup: "const JSON = require('JSON');\nconst mockData = {};\n\nmock('getCookieValues',\
+  \ name => {\n  return [name];\n});\n\nmock('getRemoteAddress', () => {\n  return\
+  \ '1.2.3.4';\n});\n\nmock('getRequestHeader', header => {\n  return header;\n});\n\
+  \nmock('getRequestPath', () => {\n  return '/fbq/';\n});\n\nconst mockParams = {\n\
+  \  fbclid: 'fbclid',\n  pid: 'pixel_id',\n  tec: 'test_event_code',\n  en: 'en',\n\
+  \  et: 123123123,\n  esu: 'esu',\n  ou: 'ou',\n  ei: 'ei',\n  ud: '{\"fb_login_id\"\
+  : \"123123123\", \"subscription_id\": \"subscription_id\"}',\n  cd: '{\"content_type\"\
+  : \"product\", \"currency\": \"EUR\"}',\n  dpo: '[]'\n};\n\nconst mockContainerObj\
+  \ = {\n  event_name: 'en',\n  timestamp_micros: mockParams.et,\n  source_url: mockParams.esu,\n\
+  \  event_id: mockParams.ei,\n  user_properties: {\n    email_address: undefined,\n\
+  \    phone_number: undefined,\n    gender: undefined,\n    date_of_birth: undefined,\n\
+  \    last_name: undefined,\n    first_name: undefined,\n    address: {\n      city:\
+  \ undefined,\n      region: undefined,\n      post_code: undefined,\n      country_code:\
+  \ undefined\n    },\n    ip_address: '1.2.3.4',\n    user_agent: 'user-agent',\n\
+  \    user_id: undefined\n  },\n  'x-fb-pixel_id': mockParams.pid,\n  'x-fb-test_event_code':\
+  \ mockParams.tec,\n  'x-fb-opt_out': mockParams.ou,\n  'x-fb-fbc': '_fbc',\n  'x-fb-fbp':\
+  \ '_fbp',\n  'x-fb-subscription_id': 'subscription_id',\n  'x-fb-lead_id': undefined,\n\
+  \  'x-fb-login_id': 123123123,\n  'x-fb-custom_data': {\n    content_type: 'product',\n\
+  \    currency: 'EUR'\n  },\n  'x-fb-dpo': JSON.parse(mockParams.dpo)\n};\n   \n\
+  mock('getRequestQueryParameters', () => {\n  return mockParams;\n});\n    \nlet\
+  \ complete, containerObj;\nmock('runContainer', (obj, oncomplete) => {\n  complete\
+  \ = oncomplete;\n  containerObj = obj;\n  oncomplete();\n});\n\nmock('setCookie',\
+  \ (name, value, options) => {});"
 
 
 ___NOTES___
