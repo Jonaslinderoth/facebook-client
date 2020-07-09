@@ -10,9 +10,9 @@ ___INFO___
 
 {
   "type": "CLIENT",
+  "id": "cvt_temp_public_id",
   "__wm": "VGVtcGxhdGUtQXV0aG9yX0ZhY2Vib29rLUNsaWVudC1TaW1vLUFoYXZh",
   "categories": ["ADVERTISING", "ANALYTICS"],
-  "id": "cvt_temp_public_id",
   "version": 1,
   "securityGroups": [],
   "displayName": "Facebook Client",
@@ -62,6 +62,20 @@ const _fbp = getCookieValues('_fbp')[0];
 const uip = getRemoteAddress();
 const ua = getRequestHeader('user-agent');
 
+// Helpers
+const standardEventNames = ['AddPaymentInfo', 'AddToCart', 'AddToWishlist', 'CompleteRegistration', 'Contact', 'CustomizeProduct', 'Donate', 'FindLocation', 'InitiateCheckout', 'Lead', 'PageView', 'Purchase', 'Schedule', 'Search', 'StartTrial', 'SubmitApplication', 'Subscribe', 'ViewContent'];
+
+const camelCaseToLowerCaseParts = (str, list) => {
+  if (!list) list = [];
+  const index = str.substring(1).search('[A-Z]');
+  if (index >= 0) {
+    list.push(str.substring(0, index + 1).toLowerCase());
+    return camelCaseToLowerCaseParts(str.substring(index + 1), list);
+  }
+  if (str.length) list.push(str.toLowerCase());
+  return list;
+};            
+
 // If request is from web template, claim it
 if (getRequestPath() === '/fbq/') {
   claimRequest();
@@ -74,7 +88,7 @@ if (getRequestPath() === '/fbq/') {
   const dpo = JSON.parse(params.dpo);
 
   const event_data = {
-    event_name: params.en,
+    event_name: standardEventNames.indexOf(params.en) > -1 ? camelCaseToLowerCaseParts(params.en).join('_') : 'custom_facebook',
     timestamp_micros: makeInteger(params.et),
     source_url: params.esu,
     event_id: params.ei,
@@ -95,6 +109,7 @@ if (getRequestPath() === '/fbq/') {
       user_agent: ua,
       user_id: user_data.external_id
     },
+    'x-fb-custom_event': standardEventNames.indexOf(params.en) === -1 ? params.en : undefined,
     'x-fb-pixel_id': params.pid,
     'x-fb-test_event_code': params.tec,
     'x-fb-opt_out': params.ou,
@@ -477,29 +492,49 @@ scenarios:
     assertApi('setCookie').wasCalled();
     assertApi('setPixelResponse').wasCalled();
     assertApi('returnResponse').wasCalled();
+- name: Container run with standard event
+  code: |-
+    mockParams.en = 'AddPaymentInfo';
+    mockContainerObj.event_name = 'add_payment_info';
+    mockContainerObj['x-fb-custom_event'] = undefined;
+
+    // Call runCode to run the template's code.
+    runCode(mockData);
+    assertThat(containerObj, 'runContainer() called with invalid object').isEqualTo(mockContainerObj);
+
+    assertApi('getCookieValues').wasCalledWith('_fbc');
+    assertApi('getCookieValues').wasCalledWith('_fbp');
+    assertApi('getRemoteAddress').wasCalled();
+    assertApi('getRequestHeader').wasCalledWith('user-agent');
+    assertApi('getRequestPath').wasCalled();
+    assertApi('getRequestQueryParameters').wasCalled();
+    assertApi('runContainer').wasCalledWith(containerObj, complete);
+    assertApi('setCookie').wasCalled();
+    assertApi('setPixelResponse').wasCalled();
+    assertApi('returnResponse').wasCalled();
 setup: "const JSON = require('JSON');\nconst mockData = {};\n\nmock('getCookieValues',\
   \ name => {\n  return [name];\n});\n\nmock('getRemoteAddress', () => {\n  return\
   \ '1.2.3.4';\n});\n\nmock('getRequestHeader', header => {\n  return header;\n});\n\
   \nmock('getRequestPath', () => {\n  return '/fbq/';\n});\n\nconst mockParams = {\n\
-  \  fbclid: 'fbclid',\n  pid: 'pixel_id',\n  tec: 'test_event_code',\n  en: 'en',\n\
+  \  fbclid: 'fbclid',\n  pid: 'pixel_id',\n  tec: 'test_event_code',\n  en: 'custom',\n\
   \  et: 123123123,\n  esu: 'esu',\n  ou: 'ou',\n  ei: 'ei',\n  ud: '{\"fb_login_id\"\
   : \"123123123\", \"subscription_id\": \"subscription_id\"}',\n  cd: '{\"content_type\"\
   : \"product\", \"currency\": \"EUR\"}',\n  dpo: '[]'\n};\n\nconst mockContainerObj\
-  \ = {\n  event_name: 'en',\n  timestamp_micros: mockParams.et,\n  source_url: mockParams.esu,\n\
-  \  event_id: mockParams.ei,\n  user_properties: {\n    email_address: undefined,\n\
-  \    phone_number: undefined,\n    gender: undefined,\n    date_of_birth: undefined,\n\
-  \    last_name: undefined,\n    first_name: undefined,\n    address: {\n      city:\
-  \ undefined,\n      region: undefined,\n      post_code: undefined,\n      country_code:\
-  \ undefined\n    },\n    ip_address: '1.2.3.4',\n    user_agent: 'user-agent',\n\
-  \    user_id: undefined\n  },\n  'x-fb-pixel_id': mockParams.pid,\n  'x-fb-test_event_code':\
-  \ mockParams.tec,\n  'x-fb-opt_out': mockParams.ou,\n  'x-fb-fbc': '_fbc',\n  'x-fb-fbp':\
-  \ '_fbp',\n  'x-fb-subscription_id': 'subscription_id',\n  'x-fb-lead_id': undefined,\n\
-  \  'x-fb-login_id': 123123123,\n  'x-fb-custom_data': {\n    content_type: 'product',\n\
-  \    currency: 'EUR'\n  },\n  'x-fb-dpo': JSON.parse(mockParams.dpo)\n};\n   \n\
-  mock('getRequestQueryParameters', () => {\n  return mockParams;\n});\n    \nlet\
-  \ complete, containerObj;\nmock('runContainer', (obj, oncomplete) => {\n  complete\
-  \ = oncomplete;\n  containerObj = obj;\n  oncomplete();\n});\n\nmock('setCookie',\
-  \ (name, value, options) => {});"
+  \ = {\n  event_name: 'custom_facebook',\n  timestamp_micros: mockParams.et,\n  source_url:\
+  \ mockParams.esu,\n  event_id: mockParams.ei,\n  user_properties: {\n    email_address:\
+  \ undefined,\n    phone_number: undefined,\n    gender: undefined,\n    date_of_birth:\
+  \ undefined,\n    last_name: undefined,\n    first_name: undefined,\n    address:\
+  \ {\n      city: undefined,\n      region: undefined,\n      post_code: undefined,\n\
+  \      country_code: undefined\n    },\n    ip_address: '1.2.3.4',\n    user_agent:\
+  \ 'user-agent',\n    user_id: undefined\n  },\n  'x-fb-custom_event': 'custom',\n\
+  \  'x-fb-pixel_id': mockParams.pid,\n  'x-fb-test_event_code': mockParams.tec,\n\
+  \  'x-fb-opt_out': mockParams.ou,\n  'x-fb-fbc': '_fbc',\n  'x-fb-fbp': '_fbp',\n\
+  \  'x-fb-subscription_id': 'subscription_id',\n  'x-fb-lead_id': undefined,\n  'x-fb-login_id':\
+  \ 123123123,\n  'x-fb-custom_data': {\n    content_type: 'product',\n    currency:\
+  \ 'EUR'\n  },\n  'x-fb-dpo': JSON.parse(mockParams.dpo)\n};\n   \nmock('getRequestQueryParameters',\
+  \ () => {\n  return mockParams;\n});\n    \nlet complete, containerObj;\nmock('runContainer',\
+  \ (obj, oncomplete) => {\n  complete = oncomplete;\n  containerObj = obj;\n  oncomplete();\n\
+  });\n\nmock('setCookie', (name, value, options) => {});"
 
 
 ___NOTES___
