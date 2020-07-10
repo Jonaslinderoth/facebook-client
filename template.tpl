@@ -1,18 +1,13 @@
-﻿___TERMS_OF_SERVICE___
-
-By creating or modifying this file you agree to Google Tag Manager's Community
-Template Gallery Developer Terms of Service available at
-https://developers.google.com/tag-manager/gallery-tos (or such other URL as
-Google may provide), as modified from time to time.
-
-
-___INFO___
+﻿___INFO___
 
 {
   "type": "CLIENT",
   "id": "cvt_temp_public_id",
   "__wm": "VGVtcGxhdGUtQXV0aG9yX0ZhY2Vib29rLUNsaWVudC1TaW1vLUFoYXZh",
-  "categories": ["ADVERTISING", "ANALYTICS"],
+  "categories": [
+    "ADVERTISING",
+    "ANALYTICS"
+  ],
   "version": 1,
   "securityGroups": [],
   "displayName": "Facebook Client",
@@ -90,7 +85,7 @@ if (getRequestPath() === '/fbq/') {
   const event_data = {
     event_name: standardEventNames.indexOf(params.en) > -1 ? camelCaseToLowerCaseParts(params.en).join('_') : 'custom_facebook',
     timestamp_micros: makeInteger(params.et),
-    source_url: params.esu,
+    page_location: params.esu,
     event_id: params.ei,
     user_properties: {
       email_address: user_data.em,
@@ -520,7 +515,7 @@ setup: "const JSON = require('JSON');\nconst mockData = {};\n\nmock('getCookieVa
   \  et: 123123123,\n  esu: 'esu',\n  ou: 'ou',\n  ei: 'ei',\n  ud: '{\"fb_login_id\"\
   : \"123123123\", \"subscription_id\": \"subscription_id\"}',\n  cd: '{\"content_type\"\
   : \"product\", \"currency\": \"EUR\"}',\n  dpo: '[]'\n};\n\nconst mockContainerObj\
-  \ = {\n  event_name: 'custom_facebook',\n  timestamp_micros: mockParams.et,\n  source_url:\
+  \ = {\n  event_name: 'custom_facebook',\n  timestamp_micros: mockParams.et,\n  page_location:\
   \ mockParams.esu,\n  event_id: mockParams.ei,\n  user_properties: {\n    email_address:\
   \ undefined,\n    phone_number: undefined,\n    gender: undefined,\n    date_of_birth:\
   \ undefined,\n    last_name: undefined,\n    first_name: undefined,\n    address:\
