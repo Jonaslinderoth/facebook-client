@@ -1,7 +1,7 @@
 homepage: "https://www.simoahava.com/"
 versions:
   # Latest version
-  - sha: 6030129bc9cd5dfa14fd5b01dc64af7591cf0728
+  - sha: cb28149fdce089524669e7f688b3137a62f2160c
     changeNotes: Update to use unified event names.
   # Older versions
   - sha: 4c56476e9688403bbaebe44354650f364edc799e
