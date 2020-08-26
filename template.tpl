@@ -215,6 +215,13 @@ ___SERVER_PERMISSIONS___
           }
         },
         {
+          "key": "remoteAddressAllowed",
+          "value": {
+            "type": 8,
+            "boolean": true
+          }
+        },
+        {
           "key": "headersAllowed",
           "value": {
             "type": 8,
