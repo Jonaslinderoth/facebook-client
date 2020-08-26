@@ -1,9 +1,11 @@
 homepage: "https://www.simoahava.com/"
 versions:
   # Latest version
+  - sha: 63333903a171aa81b3e52c31437549717d0c41f1
+    changeNotes: Add missing permission for accessing remote IP address.
+  # Older versions
   - sha: cb28149fdce089524669e7f688b3137a62f2160c
     changeNotes: Update to use unified event names.
-  # Older versions
   - sha: 4c56476e9688403bbaebe44354650f364edc799e
     changeNotes: |2
       Update to use event schema.
